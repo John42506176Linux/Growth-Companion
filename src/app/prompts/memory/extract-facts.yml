@@ -1,0 +1,150 @@
+text: |
+  Extract personal facts from this conversation on {dateString}.
+
+  EXISTING GENERAL MEMORIES TO CHECK FOR UPDATES:
+  {existingContext.generalMemories}
+
+  CONVERSATION:
+  {conversationContext}
+
+  TASK: Extract important, stable personal facts about the user. ONLY EXTRACT CONCRETE INFORMATION THE USER HAS EXPLICITY CONFIRMED.
+
+  MEMORY EXTRACTION RULES:
+  1. Put ALL memory mentions in the generalMemories array (whether new or existing)
+  2. IF referencing an EXISTING memory: Include the ID from the existing memories list above
+  3. IF discovering a NEW memory: Leave out the ID field entirely
+  4. IF new information REFINES/UPDATES existing memory: Update the existing memory with ID
+  5. IF new information is COMPLETELY DIFFERENT topic: Create new memory without ID
+  6. Any information about plans/considerations/aspirations/goals/wants/ should not be extracted as memories.
+
+  MEMORY UPDATE EXAMPLES:
+
+  ✅ UPDATING EXISTING MEMORY (Adding Detail):
+  Existing: ID: 2025-01-15memory3 | "User works as an engineer" (occupation)
+  Input: "I'm a senior software engineer at Google"
+  Extract:
+  - id: "2025-01-15memory3", 
+  - content: "User is a senior software engineer at Google", 
+  - tag: "occupation"
+  Reason: This adds detail to the existing occupation
+
+  ✅ CREATING NEW MEMORY (Different Aspect):
+  Existing: ID: 2025-01-15memory4 | "User has brown hair" (hair_color)
+  Input: "I have blue eyes"
+  Extract:
+  - content: "User has blue eyes", 
+  - tag: "eye_color"
+  Reason: Eye color is different from hair color, both should exist
+
+  ✅ COMBINING RELATED ASPECTS OF SAME TRAIT:
+  Existing: ID: 2025-01-15memory5 | "User has an analytical mindset" (skill)
+  Input: "I've always worked best by analytically breaking down problems. That's how my mind works and it's what my talent is"
+  Extract:
+  - id: "2025-01-15memory5",
+  - content: "User has an analytical mindset and talent for breaking down problems", 
+  - tag: "skill"
+  Reason: Both statements describe the same core skill - analytical thinking
+
+  ATOMIC MEMORY PRINCIPLE: Extract specific, atomic personal facts - ONE FACT PER MEMORY with ONE TAG. Combine related aspects of the SAME characteristic, separate truly DIFFERENT characteristics.
+
+  EXAMPLES OF WHAT TO EXTRACT:
+
+  ✅ PERSONAL IDENTITY:
+  Input: "I'm John, I'm 23 years old"
+  Extract: 
+  - "User's name is John" (tag: name)
+  - "User is 23 years old" (tag: age)
+  Reasoning: These are separate concrete facts about the user's name and age.
+
+  ✅ PHYSICAL CHARACTERISTICS:
+  Input: "I'm 6'2 with brown hair and a muscular build"
+  Extract:
+  - "User is 6'2 tall" (tag: height)
+  - "User has brown hair" (tag: hair_color)  
+  - "User has a muscular build" (tag: body_type)
+  Reasoning: These are separate concrete facts about the user's physical characteristics.
+
+  ✅ OCCUPATION & EDUCATION:
+  Input: "I work as a software engineer at a tech startup and graduated from UT Austin"
+  Extract:
+  - "User works as a software engineer" (tag: occupation)
+  - "User graduated from UT Austin" (tag: education)
+  Reasoning: These are separate concrete facts about the user's occupation and education.
+
+  ✅ STABLE ROUTINES:
+  Input: "I go to the bouldering gym 3 times per week"
+  Extract:
+  - "User goes to bouldering gym 3 times per week" (tag: routine)
+  Reasoning: This is concrete information about the user's routine.
+
+  ✅ RELATIONSHIP STATUS:
+  Input: "I'm in a relationship with my girlfriend Sarah"
+  Extract:
+  - "User is in a relationship with his girlfriend Sarah" (tag: relationship_status)
+  Reasoning: This is concrete information about the user's relationship status.
+
+  EXAMPLES OF WHAT NOT TO EXTRACT:
+
+  ❌ SUBJECTIVE FEELINGS:
+  Input: "I feel like I choke during conversations"
+  Extract: Empty array
+  Reasoning: This is a feeling, not a stable fact
+
+  ❌ TRANSIENT PERCEPTIONS:
+  Input: "I think my jawline is too wide today"
+  Extract: Empty array
+  Reasoning: This is temporary self-perception
+
+  ❌ ASPIRATIONS:
+  Input: "I want to be a software engineer"
+  Extract: Empty array
+  Reasoning: This is an aspiration, not a concrete fact. Aspirations are not memories.
+
+  ❌ CONSIDERATIONS:
+  Input: "How to become a TCM doctor"
+  Extract: Empty array
+  Reasoning: This is a consideration, not an actual fact
+
+  ❌ HYPOTHETICALS:
+  Input: "Could I finish premed in 3 years and graduate without AP credits?"
+  Extract: Empty array
+  Reasoning: This is a hypothetical question about possibilities, not a statement of actual plans or enrollment.
+
+  FOCUS: Stable, objective facts about who the user IS right now.
+
+  OUTPUT: Only generalMemories array with personal facts.
+
+description: Extract stable personal facts from conversations while filtering out aspirations, feelings, and hypotheticals
+default_model: gemini-2.5-pro
+provider: vertex
+response_format: json
+thinking_budget: -1
+include_thoughts: true
+response_schema:
+  type: object
+  properties:
+    generalMemories:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+            description: "Only include if updating existing memory, use the ID from the existing memories list above"
+          content:
+            type: string
+          tag:
+            type: string
+            enum: ['skill', 'physical_trait', 'name', 'age', 'sex', 'height', 'weight', 'body_type', 'hair_color', 'eye_color', 'skin_tone', 'occupation', 'education', 'relationship_status', 'family_details', 'routine','personal_values','religion','nationality','ethnicity','place_of_birth','home_location','income']
+          quote:
+            type: string
+        required: ["content", "tag", "quote"]
+        description: "ALL memory mentions. Include ID if existing memory, omit ID if new memory."
+  required: ["generalMemories"]
+meta:
+  authors:
+    - chatgpt-journal
+  category: memory-extraction
+  use_case: personal-fact-extraction
+  filter_words: ['planning', 'plans', 'interested', 'interest', 'considering', 'goal', 'goals', 'wants', 'want']
+version: "1.0.0" 
